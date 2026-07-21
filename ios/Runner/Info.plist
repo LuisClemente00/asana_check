@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Necesitamos acceder a la cámara para poder detectar tus posturas de yoga con inteligencia artificial.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Necesitamos acceder al micrófono para el asistente de voz durante las sesiones.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
