@@ -1,7 +1,7 @@
 // Archivo: sequence_runner_screen.dart
 
 import 'package:flutter/material.dart';
-import 'sequence.dart'; // <--- Cambiado de 'models/sequence.dart' a 'sequence.dart'
+import 'sequence.dart'; 
 import 'pose_detector_screen.dart';
 import 'pose_result_screen.dart';
 
@@ -22,11 +22,12 @@ class _SequenceRunnerScreenState extends State<SequenceRunnerScreen> {
     _totalTimeAccumulated += secondsSpent;
 
     if (_currentIndex < widget.sequence.asanaList.length - 1) {
+      // Pasa a la siguiente postura de forma automática e inmediata
       setState(() {
         _currentIndex++;
       });
-      _showTransitionDialog();
     } else {
+      // Al terminar toda la secuencia, mostramos el resumen final
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -37,32 +38,6 @@ class _SequenceRunnerScreenState extends State<SequenceRunnerScreen> {
         ),
       );
     }
-  }
-
-  void _showTransitionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2D3A3A),
-          title: const Text("¡Excelente trabajo!", style: TextStyle(color: Colors.white)),
-          content: Text(
-            "Siguiente postura: ${widget.sequence.asanaList[_currentIndex]}",
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5AC8)),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Continuar", style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override

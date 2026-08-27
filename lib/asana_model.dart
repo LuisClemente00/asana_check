@@ -20,6 +20,7 @@ class AsanaModel {
   });
 
   static const List<AsanaModel> allAsanas = [
+    // --- POSTURAS INICIALES ---
     AsanaModel(
       id: 'arbol',
       title: 'El Árbol',
@@ -99,6 +100,72 @@ class AsanaModel {
       category: 'Espalda',
       level: 'Intermedio',
       icon: Icons.shield_outlined,
+    ),
+
+    // --- NUEVAS ASANAS AÑADIDAS ---
+    AsanaModel(
+      id: 'guerrero_3',
+      title: 'El Guerrero III',
+      sanskrit: 'Virabhadrasana III',
+      category: 'Equilibrio',
+      level: 'Avanzado',
+      icon: Icons.nordic_walking_rounded,
+    ),
+    AsanaModel(
+      id: 'pinza_de_pie',
+      title: 'La Pinza de Pie',
+      sanskrit: 'Uttanasana',
+      category: 'Flexibilidad',
+      level: 'Principiante',
+      icon: Icons.vertical_align_bottom_rounded,
+    ),
+    AsanaModel(
+      id: 'camello',
+      title: 'El Camello',
+      sanskrit: 'Ustrasana',
+      category: 'Espalda',
+      level: 'Intermedio',
+      icon: Icons.wb_twilight_rounded,
+    ),
+    AsanaModel(
+      id: 'torsion_sentada',
+      title: 'Señor de los Peces',
+      sanskrit: 'Ardha Matsyendrasana',
+      category: 'Torsión',
+      level: 'Intermedio',
+      icon: Icons.sync_rounded,
+    ),
+    AsanaModel(
+      id: 'paloma',
+      title: 'La Paloma',
+      sanskrit: 'Eka Pada Rajakapotasana',
+      category: 'Flexibilidad',
+      level: 'Avanzado',
+      icon: Icons.flutter_dash_rounded,
+    ),
+    AsanaModel(
+      id: 'zapatero',
+      title: 'La Mariposa',
+      sanskrit: 'Baddha Konasana',
+      category: 'Cadera',
+      level: 'Principiante',
+      icon: Icons.eco_rounded,
+    ),
+    AsanaModel(
+      id: 'guerrero_humilde',
+      title: 'Guerrero Humilde',
+      sanskrit: 'Baddha Virabhadrasana',
+      category: 'Fuerza',
+      level: 'Intermedio',
+      icon: Icons.nature_people_rounded,
+    ),
+    AsanaModel(
+      id: 'barco',
+      title: 'El Barco',
+      sanskrit: 'Navasana',
+      category: 'Core',
+      level: 'Intermedio',
+      icon: Icons.sailing_rounded,
     ),
   ];
 }

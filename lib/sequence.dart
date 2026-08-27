@@ -20,6 +20,9 @@ class Sequence {
 typedef SequenceModel = Sequence;
 
 final List<Sequence> sampleSequences = [
+  // ==========================================
+  // SECUENCIAS INICIALES / BÁSICAS
+  // ==========================================
   const Sequence(
     id: "seq_1",
     title: "Saludo al Sol A",
@@ -39,6 +42,100 @@ final List<Sequence> sampleSequences = [
     title: "Relajación y Apertura",
     description: "Secuencia suave para estirar la espalda y liberar tensiones.",
     totalDurationMinutes: 12,
-    asanaList: ["Gato-Vaca", "El Puente", "La Cobra", "Perro Boca Abajo"],
+    asanaList: ["La Cobra", "El Puente", "Perro Boca Abajo", "La Mariposa"],
+  ),
+
+  // ==========================================
+  // NUEVAS SECUENCIAS TEMÁTICAS SPAINTOBALI
+  // ==========================================
+  const Sequence(
+    id: "seq_4",
+    title: "Despertar Solar en Bali",
+    description: "Rutina matutina para activar articulaciones y despertar la energía del día.",
+    totalDurationMinutes: 15,
+    asanaList: [
+      "El Árbol",
+      "Perro Boca Abajo",
+      "La Plancha",
+      "La Cobra",
+      "El Guerrero I",
+      "El Triángulo"
+    ],
+  ),
+  const Sequence(
+    id: "seq_5",
+    title: "Fuego & Poder del Guerrero",
+    description: "Enfoque en resistencia muscular, fuerza en piernas y estabilización del core.",
+    totalDurationMinutes: 25,
+    asanaList: [
+      "La Silla",
+      "El Guerrero I",
+      "El Guerrero II",
+      "El Guerrero III",
+      "El Barco",
+      "El Puente"
+    ],
+  ),
+  const Sequence(
+    id: "seq_6",
+    title: "Apertura Pélvica y Liberación",
+    description: "Desbloquea caderas e ingles liberando el estrés acumulado.",
+    totalDurationMinutes: 20,
+    asanaList: [
+      "La Pinza de Pie",
+      "El Árbol",
+      "La Paloma",
+      "La Mariposa",
+      "Señor de los Peces"
+    ],
+  ),
+  const Sequence(
+    id: "seq_7",
+    title: "Fluidez y Centro (Vinyasa Flow)",
+    description: "Coordinación, foco mental y equilibrio tridimensional continuo.",
+    totalDurationMinutes: 30,
+    asanaList: [
+      "La Silla",
+      "El Guerrero II",
+      "El Triángulo",
+      "La Media Luna",
+      "El Camello",
+      "La Pinza de Pie"
+    ],
+  ),
+  const Sequence(
+    id: "seq_8",
+    title: "Atardecer Restaurativo Bali",
+    description: "Secuencia nocturna para desacelerar el ritmo cardíaco y relajar la columna.",
+    totalDurationMinutes: 15,
+    asanaList: [
+      "La Cobra",
+      "La Paloma",
+      "La Mariposa",
+      "El Puente"
+    ],
+  ),
+  const Sequence(
+    id: "seq_9",
+    title: "Inmersión Total",
+    description: "Flujo completo de práctica integral recorriendo todas las familias de asanas.",
+    totalDurationMinutes: 45,
+    asanaList: [
+      "Perro Boca Abajo",
+      "La Plancha",
+      "La Cobra",
+      "La Silla",
+      "El Guerrero I",
+      "El Guerrero II",
+      "El Guerrero III",
+      "El Triángulo",
+      "La Media Luna",
+      "La Paloma",
+      "El Camello",
+      "El Barco",
+      "Señor de los Peces",
+      "El Puente",
+      "La Mariposa"
+    ],
   ),
 ];

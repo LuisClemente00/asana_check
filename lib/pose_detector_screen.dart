@@ -60,23 +60,112 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
   DateTime? _lastSpeechTime;
 
   int _currentStep = 0;
+  bool _showImagePreview = true;
+
   final Map<String, List<String>> _asanaSteps = {
-    "La Montaña": [
-      "Pies al ancho de caderas.",
-      "Distribuye el peso.",
-      "Alarga la columna.",
+    "El Árbol": [
+      "Pie de apoyo firme en el suelo.",
+      "Eleva la planta del pie contrario al muslo o pantorrilla.",
+      "Junta las palmas al pecho o sobre la cabeza.",
     ],
     "Perro Boca Abajo": [
-      "Manos firmes al ancho de hombros.",
-      "Eleva la cadera.",
-      "Empuja el suelo.",
+      "Manos firmes abiertas al ancho de hombros.",
+      "Eleva la cadera hacia el techo.",
+      "Empuja el suelo alargando la espalda.",
     ],
     "El Guerrero II": [
-      "Piernas separadas.",
-      "Dobla rodilla delantera.",
-      "Brazos en cruz.",
+      "Piernas ampliamente separadas.",
+      "Flexiona la rodilla delantera a 90 grados.",
+      "Brazos extendidos en cruz a la altura de los hombros.",
+    ],
+    "La Plancha": [
+      "Cuerpo alineado en una tabla recta.",
+      "Manos bajo la vertical de los hombros.",
+      "Core y glúteos fuertemente activados.",
+    ],
+    "El Triángulo": [
+      "Separa piernas e inclina el torso lateralmente.",
+      "Mano inferior a la espinilla o tobillo.",
+      "Brazo superior apuntando al cielo abriendo el pecho.",
+    ],
+    "La Cobra": [
+      "Túmbate boca abajo con manos bajo los hombros.",
+      "Presiona el empeine contra el suelo.",
+      "Eleva suavemente el pecho sin colapsar el cuello.",
+    ],
+    "La Silla": [
+      "Pies juntos o al ancho de caderas.",
+      "Flexiona rodillas bajando la cadera como al sentarte.",
+      "Eleva ambos brazos junto a las orejas.",
+    ],
+    "El Guerrero I": [
+      "Da un paso largo atrás con una pierna.",
+      "Flexiona la rodilla delantera.",
+      "Eleva brazos extendidos rotando la cadera al frente.",
+    ],
+    "La Media Luna": [
+      "Apoya una mano en el suelo y eleva la pierna trasera.",
+      "Abre cadera y pecho lateralmente.",
+      "Extiende el brazo superior al cielo.",
+    ],
+    "El Puente": [
+      "Túmbate boca arriba con rodillas flexionadas.",
+      "Eleva la cadera despegando la espalda del suelo.",
+      "Presiona los pies contra la esterilla.",
+    ],
+    "El Guerrero III": [
+      "Equilibrio sobre una pierna estirada.",
+      "Torso e pierna trasera paralelos al suelo.",
+      "Brazos extendidos hacia adelante o al pecho.",
+    ],
+    "La Pinza de Pie": [
+      "Pies juntos y piernas estiradas.",
+      "Flexiónate desde la cadera llevando el torso abajo.",
+      "Relaja cuello y cabeza hacia las espinillas.",
+    ],
+    "El Camello": [
+      "De rodillas en el suelo.",
+      "Lleva manos a tobillos empujando la pelvis al frente.",
+      "Abre el pecho hacia el cielo.",
+    ],
+    "Señor de los Peces": [
+      "Sentado con una pierna cruzada sobre la otra.",
+      "Gira el torso abrazando la rodilla elevada.",
+      "Mantiene la columna erguida.",
+    ],
+    "La Paloma": [
+      "Flexiona una pierna adelante y estira la otra atrás.",
+      "Cadera alineada hacia el suelo.",
+      "Apertura profunda de cadera.",
+    ],
+    "La Mariposa": [
+      "Sentado con plantas de los pies juntas.",
+      "Deja caer las rodillas hacia los lados.",
+      "Alarga la columna y relaja caderas.",
+    ],
+    "Guerrero Humilde": [
+      "Desde Guerrero I, entrelaza manos a la espalda.",
+      "Declina el torso por el interior de la rodilla delantera.",
+      "Eleva los brazos estirados.",
+    ],
+    "El Barco": [
+      "Sentado sobre los isquiones.",
+      "Eleva piernas en diagonal y reclinando el torso.",
+      "Brazos extendidos hacia adelante.",
     ],
   };
+
+  String _getPoseAssetPath(String name) {
+    final sanitized = name
+        .toLowerCase()
+        .replaceAll(' ', '_')
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u');
+    return 'assets/asanas/$sanitized.png';
+  }
 
   @override
   void initState() {
@@ -248,345 +337,252 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
   }
 
   void _analyzePoseReal(Pose pose) {
-    final activeHip = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.rightHip]
-        : pose.landmarks[PoseLandmarkType.leftHip];
-    final activeKnee = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.rightKnee]
-        : pose.landmarks[PoseLandmarkType.leftKnee];
-    final activeAnkle = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.rightAnkle]
-        : pose.landmarks[PoseLandmarkType.leftAnkle];
+    // 1. OBTENER Y VALIDAR PUNTOS CLAVE (confianza > 0.65)
+    final rShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final lShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rHip = pose.landmarks[PoseLandmarkType.rightHip];
+    final lHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rKnee = pose.landmarks[PoseLandmarkType.rightKnee];
+    final lKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+    final lAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
+    final rElbow = pose.landmarks[PoseLandmarkType.rightElbow];
+    final lElbow = pose.landmarks[PoseLandmarkType.leftElbow];
+    final rWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+    final lWrist = pose.landmarks[PoseLandmarkType.leftWrist];
 
-    final oppositeHip = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.leftHip]
-        : pose.landmarks[PoseLandmarkType.rightHip];
-    final oppositeKnee = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.leftKnee]
-        : pose.landmarks[PoseLandmarkType.rightKnee];
-    final oppositeAnkle = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.leftAnkle]
-        : pose.landmarks[PoseLandmarkType.rightAnkle];
+    bool isReliable(PoseLandmark? lm) => lm != null && lm.likelihood > 0.65;
 
-    final activeShoulder = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.rightShoulder]
-        : pose.landmarks[PoseLandmarkType.leftShoulder];
-    final activeElbow = _isRightSide
-        ? pose.landmarks[PoseLandmarkType.rightElbow]
-        : pose.landmarks[PoseLandmarkType.leftElbow];
+    bool bodyVisible = isReliable(rShoulder) &&
+        isReliable(lShoulder) &&
+        isReliable(rHip) &&
+        isReliable(lHip) &&
+        isReliable(rKnee) &&
+        isReliable(lKnee) &&
+        isReliable(rAnkle) &&
+        isReliable(lAnkle);
 
-    if (activeHip == null ||
-        activeKnee == null ||
-        activeAnkle == null ||
-        oppositeHip == null ||
-        oppositeKnee == null ||
-        oppositeAnkle == null) {
-      setState(() {
-        _feedbackMessage = "Cuerpo incompleto en cámara. Da un paso atrás.";
-        _isAlignmentCorrect = false;
-      });
+    if (!bodyVisible) {
+      _handleAlignment(
+        correct: false,
+        message: "Ponte a una distancia donde la cámara vea todo tu cuerpo.",
+        speech: "Aléjate hasta que se vean tus pies y tus hombros.",
+      );
       return;
     }
 
-    // 1. EL ÁRBOL
-    if (widget.asanaName == 'El Árbol') {
-      if (activeShoulder != null && activeShoulder.y > activeHip.y) {
-        setState(() {
-          _feedbackMessage = "¡Ponte de pie! Estás inclinado o boca abajo.";
-          _isAlignmentCorrect = false;
-        });
-        return;
-      }
+    // Puntos de trabajo según lado (derecho / izquierdo)
+    final standingHip = _isRightSide ? rHip! : lHip!;
+    final standingKnee = _isRightSide ? rKnee! : lKnee!;
+    final standingAnkle = _isRightSide ? rAnkle! : lAnkle!;
+    final standingShoulder = _isRightSide ? rShoulder! : lShoulder!;
 
-      double kneeAngle = _calculateAngle(activeHip, activeKnee, activeAnkle);
-      bool isKneeBent = kneeAngle >= 60 && kneeAngle <= 125;
+    final bentHip = _isRightSide ? lHip! : rHip!;
+    final bentKnee = _isRightSide ? lKnee! : rKnee!;
+    final bentAnkle = _isRightSide ? lAnkle! : rAnkle!;
 
-      if (isKneeBent) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Ángulo de pierna óptimo! Mantén el equilibrio.",
-          speech: "Excelente postura. Quédate ahí.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Corrección: Dobla más la rodilla y apoya el pie en el muslo contrario.",
-          speech: "Alineación incorrecta. Sube más tu pie.",
-        );
-      }
-    }
-    // 2. EL GUERRERO II
-    else if (widget.asanaName == 'El Guerrero' ||
-        widget.asanaName == 'El Guerrero II') {
-      if (activeShoulder != null &&
-          (activeShoulder.y > activeHip.y || activeHip.y > activeAnkle.y)) {
-        setState(() {
-          _feedbackMessage =
-              "Asegúrate de estar de pie para la postura del Guerrero.";
-          _isAlignmentCorrect = false;
-        });
-        return;
-      }
+    // 2. EVALUACIÓN GEOMÉTRICA SEGÚN POSTURA REAL
 
-      double frontKneeAngle = _calculateAngle(
-        activeHip,
-        activeKnee,
-        activeAnkle,
-      );
-      double backKneeAngle = _calculateAngle(
-        oppositeHip,
-        oppositeKnee,
-        oppositeAnkle,
-      );
+    switch (widget.asanaName) {
+      case 'El Árbol':
+        // 1. Pierna de apoyo estirada (ángulo cercano a 180°)
+        double standingLegAngle = _calculateAngle(standingHip, standingKnee, standingAnkle);
+        bool isStandingLegStraight = standingLegAngle >= 152;
 
-      bool isFrontKneeCorrect = frontKneeAngle >= 75 && frontKneeAngle <= 120;
-      bool isBackLegStraight = backKneeAngle >= 145 && backKneeAngle <= 180;
+        // 2. Pierna doblada flexionada (ángulo entre 40° y 130°)
+        double bentLegAngle = _calculateAngle(bentHip, bentKnee, bentAnkle);
+        bool isKneeBent = bentLegAngle >= 40 && bentLegAngle <= 130;
 
-      if (isFrontKneeCorrect && isBackLegStraight) {
-        _handleAlignment(
-          correct: true,
-          message:
-              "¡Perfecto! Rodilla delantera doblada y pierna trasera estirada.",
-          speech: "Guerrero perfecto. Mantén la fuerza.",
-        );
-      } else if (!isFrontKneeCorrect) {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Corrección: Flexiona tu rodilla delantera a unos 90 grados.",
-          speech: "Baja más tu cadera y dobla la rodilla de delante.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Corrección: Estira completamente la pierna que tienes detrás.",
-          speech: "Estira la pierna de atrás.",
-        );
-      }
-    }
-    // 3. LA PLANCHA
-    else if (widget.asanaName == 'La Plancha') {
-      if (activeShoulder == null) {
-        setState(() {
-          _feedbackMessage =
-              "Ponte completamente de perfil para evaluar la plancha.";
-          _isAlignmentCorrect = false;
-        });
-        return;
-      }
+        // 3. Zonas seguras para el pie (evitando apoyar directamente en la rodilla)
+        const double kneeSafetyMargin = 18.0; 
 
-      double heightDifference = (activeShoulder.y - activeAnkle.y).abs();
-      double widthDifference = (activeShoulder.x - activeAnkle.x).abs();
+        // Zona Pantorrilla (debajo de la rodilla)
+        bool isFootInCalf = bentAnkle.y > (standingKnee.y + kneeSafetyMargin);
 
-      if (widthDifference < heightDifference) {
-        setState(() {
-          _feedbackMessage =
-              "Túmbate en el suelo de perfil para hacer la plancha.";
-          _isAlignmentCorrect = false;
-        });
-        return;
-      }
+        // Zona Muslo (encima de la rodilla)
+        bool isFootInThigh = bentAnkle.y < (standingKnee.y - kneeSafetyMargin);
 
-      double bodyAlignmentAngle = _calculateAngle(
-        activeShoulder,
-        activeHip,
-        activeAnkle,
-      );
-      bool isPlankStraight =
-          bodyAlignmentAngle >= 155 && bodyAlignmentAngle <= 180;
+        // Es válido si se apoya en el muslo O en la pantorrilla
+        bool isFootPlacementSafe = isFootInCalf || isFootInThigh;
 
-      if (isPlankStraight) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Plancha perfecta! Abdomen fuerte y cuerpo alineado.",
-          speech: "Muy bien alineado. Aprieta el abdomen.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Corrección: Alinea tu espalda. No subas ni bajes de más la cadera.",
-          speech:
-              "Mantén el cuerpo en línea recta. Corrige la altura de la cadera.",
-        );
-      }
-    }
-    // 4. EL TRIÁNGULO
-    else if (widget.asanaName == 'El Triángulo') {
-      if (activeShoulder == null) return;
-      double hipAngle = _calculateAngle(activeShoulder, activeHip, activeAnkle);
-      bool isSideBendCorrect = hipAngle >= 110 && hipAngle <= 150;
+        if (!isStandingLegStraight) {
+          _handleAlignment(
+            correct: false,
+            message: "Mantén la pierna de apoyo completamente estirada.",
+            speech: "Estira la pierna de apoyo.",
+          );
+        } else if (!isKneeBent) {
+          _handleAlignment(
+            correct: false,
+            message: "Flexiona la otra pierna abriendo la rodilla a un lado.",
+            speech: "Abre la rodilla hacia un lado.",
+          );
+        } else if (!isFootPlacementSafe) {
+          _handleAlignment(
+            correct: false,
+            message: "Apoya el pie en el muslo (arriba) o pantorrilla (abajo), nunca sobre la rodilla.",
+            speech: "Mueve el pie fuera de la rodilla.",
+          );
+        } else {
+          String positionText = isFootInThigh ? "en el muslo" : "en la pantorrilla";
+          _handleAlignment(
+            correct: true,
+            message: "¡Árbol perfecto $positionText! Mantén el equilibrio.",
+            speech: "Excelente equilibrio.",
+          );
+        }
+        break;
 
-      if (isSideBendCorrect) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Excelente inclinación lateral! Mantiene el pecho abierto.",
-          speech: "Triángulo muy bien ejecutado. Sostén la postura.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Inclínate lateralmente buscando alcanzar el tobillo con tu mano.",
-          speech: "Baja un poco más lateralmente sin doblar las rodillas.",
-        );
-      }
-    }
-    // 5. LA COBRA
-    else if (widget.asanaName == 'La Cobra') {
-      if (activeShoulder == null) return;
-      double backAngle = _calculateAngle(
-        activeShoulder,
-        activeHip,
-        activeAnkle,
-      );
-      bool isCobraCurve = backAngle >= 120 && backAngle <= 160;
+      case 'El Guerrero II':
+      case 'El Guerrero':
+        double frontKneeAngle = _calculateAngle(standingHip, standingKnee, standingAnkle);
+        double backKneeAngle = _calculateAngle(bentHip, bentKnee, bentAnkle);
 
-      if (isCobraCurve) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Apertura de pecho perfecta! Hombros lejos de las orejas.",
-          speech: "Excelente cobra. Inhala profundo.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Eleva el torso apoyando las palmas en el suelo y arquea la espalda.",
-          speech: "Empuja el suelo y eleva el pecho.",
-        );
-      }
-    }
-    // 6. LA SILLA
-    else if (widget.asanaName == 'La Silla') {
-      double activeKneeAngle = _calculateAngle(
-        activeHip,
-        activeKnee,
-        activeAnkle,
-      );
-      bool isSquatCorrect = activeKneeAngle >= 80 && activeKneeAngle <= 125;
+        bool isFrontKneeCorrect = frontKneeAngle >= 75 && frontKneeAngle <= 120;
+        bool isBackLegStraight = backKneeAngle >= 145;
 
-      if (isSquatCorrect) {
-        _handleAlignment(
-          correct: true,
-          message:
-              "¡Postura de la Silla firme! Brazos hacia arriba y cadera abajo.",
-          speech: "Gran fuerza en piernas. Sostén la Silla.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message: "Baja la cadera como si te fueras a sentar en una silla.",
-          speech: "Flexiona más las rodillas y baja la cadera.",
-        );
-      }
-    }
-    // 7. PERRO BOCA ABAJO
-    else if (widget.asanaName == 'Perro Boca Abajo') {
-      if (activeShoulder == null) return;
-      double invertedV = _calculateAngle(
-        activeShoulder,
-        activeHip,
-        activeAnkle,
-      );
-      bool isVInverted = invertedV >= 60 && invertedV <= 100;
+        if (isFrontKneeCorrect && isBackLegStraight) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Guerrero II perfecto!",
+            speech: "Guerrero dos alineado.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Flexiona la rodilla delantera a 90° y estira la trasera.",
+            speech: "Flexiona la pierna de adelante y estira la de atrás.",
+          );
+        }
+        break;
 
-      if (isVInverted) {
-        _handleAlignment(
-          correct: true,
-          message: "¡V invertida perfecta! Empuja el suelo con las manos.",
-          speech: "Excelente Perro Boca Abajo. Alarga tu columna.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Sube la cadera hacia el techo formando una V invertida con tu cuerpo.",
-          speech: "Eleva la cadera hacia arriba y atrás.",
-        );
-      }
-    }
-    // 8. EL GUERRERO I
-    else if (widget.asanaName == 'El Guerrero I') {
-      if (activeShoulder == null || activeElbow == null) return;
-      double kneeAngle = _calculateAngle(activeHip, activeKnee, activeAnkle);
-      bool isFrontBent = kneeAngle >= 75 && kneeAngle <= 120;
-      bool armsUp = activeElbow.y < activeShoulder.y;
+      case 'La Silla':
+        double kneeAngleR = _calculateAngle(rHip!, rKnee!, rAnkle!);
+        double kneeAngleL = _calculateAngle(lHip!, lKnee!, lAnkle!);
+        
+        // Ambas rodillas deben estar flexionadas (entre 80° y 130°)
+        bool kneesBent = (kneeAngleR >= 80 && kneeAngleR <= 135) && 
+                         (kneeAngleL >= 80 && kneeAngleL <= 135);
+        // Las muñecas deben estar por encima de la cabeza/hombros
+        bool armsUp = (rWrist != null && rWrist.y < rShoulder!.y) &&
+                       (lWrist != null && lWrist.y < lShoulder!.y);
 
-      if (isFrontBent && armsUp) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Guerrero I sólido! Cadera al frente y brazos elevados.",
-          speech: "Perfecto Guerrero I. Siente el poder.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Dobla la rodilla delantera y eleva ambos brazos hacia el cielo.",
-          speech: "Eleva los brazos y flexiona la pierna de adelante.",
-        );
-      }
-    }
-    // 9. LA MEDIA LUNA
-    else if (widget.asanaName == 'La Media Luna') {
-      double standingLeg = _calculateAngle(activeHip, activeKnee, activeAnkle);
-      double balanceAngle = _calculateAngle(
-        oppositeHip,
-        activeHip,
-        activeAnkle,
-      );
+        if (kneesBent && armsUp) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Silla correcta! Aguanta la posición.",
+            speech: "Buena postura de la silla.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Baja la cadera flexionando rodillas y sube los brazos.",
+            speech: "Flexiona rodillas y eleva ambos brazos.",
+          );
+        }
+        break;
 
-      bool isLegStraight = standingLeg >= 150 && standingLeg <= 180;
-      bool isFloatingLegUp = balanceAngle >= 75 && balanceAngle <= 125;
+      case 'La Pinza de Pie':
+        // Ángulo cadera-hombro-rodilla (flexión profunda de torso)
+        double hipFoldAngle = _calculateAngle(rShoulder!, rHip!, rKnee!);
+        
+        if (hipFoldAngle <= 80) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Pinza profunda! Buena flexión de columna.",
+            speech: "Excelente flexión hacia adelante.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Baja el torso llevando las manos hacia los pies.",
+            speech: "Inclínate más hacia adelante desde la cadera.",
+          );
+        }
+        break;
 
-      if (isLegStraight && isFloatingLegUp) {
-        _handleAlignment(
-          correct: true,
-          message:
-              "¡Increíble equilibrio en Media Luna! Pecho y cadera abiertos.",
-          speech: "Equilibrio magistral. Quédate ahí.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Apoya una mano en el suelo y eleva la pierna trasera en el aire.",
-          speech: "Eleva más la pierna de atrás y abre la cadera.",
-        );
-      }
-    }
-    // 10. EL PUENTE
-    else if (widget.asanaName == 'El Puente') {
-      double hipBridge = _calculateAngle(
-        activeShoulder ?? activeHip,
-        activeHip,
-        activeKnee,
-      );
-      bool isBridgeUp = hipBridge >= 140 && hipBridge <= 180;
+      case 'La Plancha':
+        // Hombro, cadera y tobillo alineados en horizontal (ángulo cercano a 180°)
+        double bodyLineAngle = _calculateAngle(standingShoulder, standingHip, standingAnkle);
+        bool isHorizontal = (standingHip.y - standingShoulder.y).abs() < 120;
 
-      if (isBridgeUp) {
-        _handleAlignment(
-          correct: true,
-          message: "¡Puente bien elevado! Glúteos e isquiotibiales activos.",
-          speech: "Puente excelente. Respira con el abdomen.",
-        );
-      } else {
-        _handleAlignment(
-          correct: false,
-          message:
-              "Túmbate boca arriba y empuja la cadera alto hacia el techo.",
-          speech: "Eleva más la cadera despegando los glúteos del suelo.",
-        );
-      }
-    } else {
-      _handleAlignment(
-        correct: false,
-        message: "Preparando postura: Colócate frente a la cámara...",
-        speech: "",
-      );
+        if (bodyLineAngle >= 155 && isHorizontal) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Plancha recta! Activa el abdomen.",
+            speech: "Plancha bien alineada.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Mantén el cuerpo en una línea recta horizontal.",
+            speech: "Alinea cadera y hombros en tabla.",
+          );
+        }
+        break;
+
+      case 'Perro Boca Abajo':
+        // Cadera es el punto más alto (Y menor que hombros y tobillos)
+        bool hipsElevated = (rHip!.y < rShoulder!.y - 20) && (rHip.y < rAnkle!.y - 20);
+
+        if (hipsElevated) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Perro Boca Abajo alineado! Cadera al techo.",
+            speech: "Buena V invertida.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Eleva la cadera hacia el techo formando una 'V' invertida.",
+            speech: "Empuja el suelo y sube la cadera.",
+          );
+        }
+        break;
+
+      case 'Guerrero Humilde':
+        double humbleFold = _calculateAngle(standingShoulder, standingHip, standingKnee);
+        if (humbleFold <= 100) {
+          _handleAlignment(
+            correct: true,
+            message: "¡Guerrero Humilde alineado!",
+            speech: "Guerrero Humilde bien ejecutado.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Inclina el torso por el interior de tu rodilla.",
+            speech: "Baja el torso por dentro de la pierna.",
+          );
+        }
+        break;
+
+      default:
+        // Exige que las muñecas o la cadera se muevan respecto a los hombros
+        bool notJustStandingStill = false;
+
+        if (rShoulder != null && lShoulder != null && rHip != null) {
+          bool armsUp = (rWrist != null && rWrist.y < rShoulder.y) ||
+                        (lWrist != null && lWrist.y < lShoulder.y);
+          bool isCrouchingOrLying = rHip.y > rShoulder.y + 150;
+
+          notJustStandingStill = armsUp || isCrouchingOrLying;
+        }
+
+        if (notJustStandingStill) {
+          _handleAlignment(
+            correct: true,
+            message: "Postura detectada. Mantén la posición...",
+            speech: "Mantén la postura.",
+          );
+        } else {
+          _handleAlignment(
+            correct: false,
+            message: "Adopta la forma de la postura para comenzar.",
+            speech: "Realiza el gesto de la postura.",
+          );
+        }
+        break;
     }
   }
 
@@ -646,10 +642,13 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
             } else {
               _secondsRemaining = 0;
               _isCompleted = true;
-              _speak(
-                "Excelente. Sesión completada con éxito en ambos lados.",
-                force: true,
-              );
+              // CAMBIO AQUÍ: Solo reproducimos este mensaje largo si NO estamos en una secuencia
+              if (widget.onPoseCompleted == null) {
+                _speak(
+                  "Excelente. Sesión completada con éxito en ambos lados.",
+                  force: true,
+                );
+              }
               _finishWorkoutSuccess();
             }
           }
@@ -669,15 +668,19 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
 
   void _finishWorkoutSuccess() async {
     _audioPlayer.stop();
-
-    // --- AÑADE ESTA LÍNEA PARA GUARDAR EL PROGRESO EN LA ACADEMIA ---
-    // (Asegúrate de pasar el identificador correcto de la lección o la asana)
-    await AcademyProgressService.completeLesson(widget.asanaName); 
+    await AcademyProgressService.completeLesson(widget.asanaName);
 
     if (widget.onPoseCompleted != null) {
+      // MODO SECUENCIA: Transición inmediata a la siguiente postura sin pausas ni pantallas intermadias
+      _speak("¡Muy bien! Siguiente postura.", force: true);
       widget.onPoseCompleted!(60);
     } else {
-      Future.delayed(const Duration(milliseconds: 3000), () {
+      // MODO POSTURA SUELTA: Feedback de fin de sesión y pantalla de resultados
+      _speak(
+        "Excelente. Sesión completada con éxito en ambos lados.",
+        force: true,
+      );
+      Future.delayed(const Duration(milliseconds: 2000), () {
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -705,6 +708,30 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
     super.dispose();
   }
 
+  // CÁMARA SIN DISTORSIÓN / ESTIRAMIENTO
+  Widget _buildCameraPreview() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF2D5AC8)),
+      );
+    }
+
+    final mediaSize = MediaQuery.of(context).size;
+    final double cameraAspectRatio = _controller!.value.aspectRatio;
+    double scale = 1 / (cameraAspectRatio * mediaSize.aspectRatio);
+
+    if (scale < 1) scale = 1 / scale;
+
+    return ClipRect(
+      child: Transform.scale(
+        scale: scale,
+        child: Center(
+          child: CameraPreview(_controller!),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTimerWidget() {
     double progress = _secondsRemaining / _poseDuration.toDouble();
 
@@ -712,8 +739,8 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
       alignment: Alignment.center,
       children: [
         SizedBox(
-          width: 140,
-          height: 140,
+          width: 130,
+          height: 130,
           child: CircularProgressIndicator(
             value: progress,
             strokeWidth: 8,
@@ -722,14 +749,14 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
               _isCompleted
                   ? Colors.green
                   : (_isAlignmentCorrect
-                        ? const Color(0xFF2D5AC8)
-                        : Colors.orangeAccent),
+                      ? const Color(0xFF2D5AC8)
+                      : Colors.orangeAccent),
             ),
           ),
         ),
         Container(
-          width: 115,
-          height: 115,
+          width: 105,
+          height: 105,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.9),
             shape: BoxShape.circle,
@@ -739,12 +766,12 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
                 ? const Icon(
                     Icons.check_circle_rounded,
                     color: Colors.green,
-                    size: 55,
+                    size: 50,
                   )
                 : Text(
                     "$_secondsRemaining",
                     style: TextStyle(
-                      fontSize: 42,
+                      fontSize: 38,
                       fontWeight: FontWeight.bold,
                       color: _isAlignmentCorrect
                           ? const Color(0xFF2D5AC8)
@@ -757,26 +784,103 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
     );
   }
 
+  Widget _buildPoseImagePreview() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showImagePreview = !_showImagePreview;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: _showImagePreview ? 100 : 44,
+        height: _showImagePreview ? 130 : 44,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white38, width: 1.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black45,
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            )
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: _showImagePreview
+              ? Stack(
+                  children: [
+                    Image.asset(
+                      _getPoseAssetPath(widget.asanaName),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.accessibility_new_rounded,
+                                  color: Colors.white54, size: 36),
+                              SizedBox(height: 4),
+                              Text(
+                                "Foto Asana",
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : const Icon(
+                  Icons.image_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final steps = _asanaSteps[widget.asanaName] ?? ["Mantén la postura"];
-    
+    final steps = _asanaSteps[widget.asanaName] ?? ["Mantén la postura e inhala profundo."];
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
           _buildCameraPreview(),
-          
           Container(color: Colors.black.withValues(alpha: 0.2)),
 
-          // 1. Overlay de Instrucción Profesional
           Positioned(
-            top: 100,
+            top: 90,
             left: 20,
             right: 20,
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(16),
@@ -785,43 +889,19 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
                 children: [
                   Text(
                     "Paso ${_currentStep + 1} / ${steps.length}:",
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
+                  const SizedBox(height: 2),
                   Text(
-                    steps[_currentStep],
+                    steps[_currentStep < steps.length ? _currentStep : 0],
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ],
-              ),
-            ),
-          ),
-
-          // 2. Botón de Control de Pasos (NUEVO)
-          Positioned(
-            bottom: 280,
-            left: 40,
-            right: 40,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A7C59),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                setState(() {
-                  if (_currentStep < steps.length - 1) {
-                    _currentStep++;
-                  } else {
-                    _speak("Pasos completados. Inicia la retención.");
-                  }
-                });
-              },
-              child: Text(
-                _currentStep < steps.length - 1 ? "Siguiente Paso" : "Modo Práctica Activo",
               ),
             ),
           ),
@@ -836,108 +916,94 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
               ),
             ),
           ),
-          
-          SafeArea(
-            child: Column(
+
+          Positioned(
+            top: 165,
+            right: 20,
+            child: _buildPoseImagePreview(),
+          ),
+
+          Positioned(
+            top: 45,
+            left: 20,
+            right: 20,
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        widget.asanaName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Text(
+                  widget.asanaName.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
                   ),
                 ),
-
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white24, width: 1),
+                    color: _isRightSide ? Colors.blue.shade700 : Colors.purple.shade700,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    "LADO: ${_isRightSide ? 'DERECHO' : 'IZQUIERDO'}",
+                    _isRightSide ? "LADO DERECHO" : "LADO IZQUIERDO",
                     style: const TextStyle(
                       color: Colors.white,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                      fontSize: 14,
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
 
-                _buildTimerWidget(),
-
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: _isAlignmentCorrect
-                          ? const Color(0xFF4A7C59).withValues(alpha: 0.85)
-                          : Colors.orangeAccent.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _isAlignmentCorrect ? const Color(0xFF8FF0A3) : Colors.orangeAccent,
-                        width: 1.5,
-                      ),
+          Positioned(
+            bottom: 30,
+            left: 20,
+            right: 20,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isAlignmentCorrect ? Colors.green : Colors.orangeAccent,
+                      width: 1.5,
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _isAlignmentCorrect ? Icons.gpp_good_rounded : Icons.info_outline_rounded,
-                              color: _isAlignmentCorrect ? const Color(0xFF8FF0A3) : Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _isCompleted
-                                  ? "¡COMPLETADO!"
-                                  : _isAlignmentCorrect
-                                      ? "ALINEACIÓN CORRECTA"
-                                      : "ALINEA TU LADO ${_isRightSide ? 'DERECHO' : 'IZQUIERDO'}",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isAlignmentCorrect
+                            ? Icons.check_circle
+                            : Icons.info_outline,
+                        color: _isAlignmentCorrect
+                            ? Colors.green
+                            : Colors.orangeAccent,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
                           _feedbackMessage,
-                          textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 16,
                             color: Colors.white,
-                            height: 1.4,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                _buildTimerWidget(),
               ],
             ),
           ),
@@ -945,44 +1011,11 @@ class _PoseDetectorScreenState extends State<PoseDetectorScreen> {
       ),
     );
   }
-
-  Widget _buildCameraPreview() {
-    if (!_isPermissionGranted ||
-        _controller == null ||
-        !_controller!.value.isInitialized) {
-      return Container(
-        color: const Color(0xFF2D3A3A),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.videocam_off_outlined,
-                color: Colors.white38,
-                size: 64,
-              ),
-              SizedBox(height: 16),
-              Text(
-                "Iniciando cámara de SpainToBali...",
-                style: TextStyle(color: Colors.white54, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return FittedBox(
-      fit: BoxFit.cover,
-      child: SizedBox(
-        width: _controller!.value.previewSize!.height,
-        height: _controller!.value.previewSize!.width,
-        child: CameraPreview(_controller!),
-      ),
-    );
-  }
 }
 
+// ========================================================
+// TODAS LAS 18 ASANAS DEFINIDAS COMPLETAS (SIN RECORTAR)
+// ========================================================
 class PoseGuidePainter extends CustomPainter {
   final String asanaName;
   final bool isAligned;
@@ -998,245 +1031,409 @@ class PoseGuidePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = isAligned
-          ? Colors.green.withValues(alpha: 0.55)
-          : Colors.orangeAccent.withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round;
+          ? Colors.green.withValues(alpha: 0.8)
+          : Colors.orangeAccent.withValues(alpha: 0.8)
+      ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke;
 
-    final joinPaint = Paint()
-      ..color = isAligned
-          ? Colors.greenAccent
-          : Colors.white.withValues(alpha: 0.85)
+    final jointPaint = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
 
     final double cx = size.width / 2;
     final double cy = size.height / 2;
 
-    final double directionMultiplier = isRightSide ? 1.0 : -1.0;
+    Map<String, Offset> points = {};
+    double sideMult = isRightSide ? 1.0 : -1.0;
 
-    if (asanaName == 'El Árbol') {
-      final head = Offset(cx, cy - 140);
-      final neck = Offset(cx, cy - 90);
-      final leftShoulder = Offset(cx - (45 * directionMultiplier), cy - 80);
-      final rightShoulder = Offset(cx + (45 * directionMultiplier), cy - 80);
-      final leftElbow = Offset(cx - (30 * directionMultiplier), cy - 160);
-      final leftWrist = Offset(cx - (10 * directionMultiplier), cy - 210);
-      final rightElbow = Offset(cx + (30 * directionMultiplier), cy - 160);
-      final rightWrist = Offset(cx + (10 * directionMultiplier), cy - 210);
-      final spineLow = Offset(cx, cy + 20);
-      final leftHip = Offset(cx - (30 * directionMultiplier), cy + 30);
-      final rightHip = Offset(cx + (30 * directionMultiplier), cy + 30);
-      final supportKnee = Offset(cx + (30 * directionMultiplier), cy + 110);
-      final supportAnkle = Offset(cx + (30 * directionMultiplier), cy + 190);
-      final activeKnee = Offset(cx - (75 * directionMultiplier), cy + 80);
-      final activeAnkle = Offset(cx + (15 * directionMultiplier), cy + 100);
+    switch (asanaName) {
+      case 'El Árbol':
+        points = {
+          'head': Offset(cx, cy - 180),
+          'neck': Offset(cx, cy - 140),
+          'rShoulder': Offset(cx - 35, cy - 130),
+          'lShoulder': Offset(cx + 35, cy - 130),
+          'rElbow': Offset(cx - 40, cy - 170),
+          'lElbow': Offset(cx + 40, cy - 170),
+          'rWrist': Offset(cx, cy - 210),
+          'lWrist': Offset(cx, cy - 210),
+          'rHip': Offset(cx - 20, cy - 30),
+          'lHip': Offset(cx + 20, cy - 30),
+          'rKnee': Offset(cx - (20 * sideMult), cy + 70),
+          'lKnee': Offset(cx + (80 * sideMult), cy + 20),
+          'rAnkle': Offset(cx - (20 * sideMult), cy + 170),
+          'lAnkle': Offset(cx + (15 * sideMult), cy + 30),
+        };
+        break;
 
-      canvas.drawLine(leftShoulder, rightShoulder, paint);
-      canvas.drawLine(neck, spineLow, paint);
-      canvas.drawLine(leftHip, rightHip, paint);
-      canvas.drawLine(leftShoulder, leftElbow, paint);
-      canvas.drawLine(leftElbow, leftWrist, paint);
-      canvas.drawLine(rightShoulder, rightElbow, paint);
-      canvas.drawLine(rightElbow, rightWrist, paint);
-      canvas.drawLine(rightHip, supportKnee, paint);
-      canvas.drawLine(supportKnee, supportAnkle, paint);
-      canvas.drawLine(leftHip, activeKnee, paint);
-      canvas.drawLine(activeKnee, activeAnkle, paint);
+      case 'El Guerrero II':
+      case 'El Guerrero':
+        points = {
+          'head': Offset(cx, cy - 140),
+          'neck': Offset(cx, cy - 100),
+          'rShoulder': Offset(cx - 40, cy - 90),
+          'lShoulder': Offset(cx + 40, cy - 90),
+          'rElbow': Offset(cx - 100, cy - 90),
+          'lElbow': Offset(cx + 100, cy - 90),
+          'rWrist': Offset(cx - 150, cy - 90),
+          'lWrist': Offset(cx + 150, cy - 90),
+          'rHip': Offset(cx - 25, cy + 10),
+          'lHip': Offset(cx + 25, cy + 10),
+          'rKnee': Offset(cx - (90 * sideMult), cy + 70),
+          'lKnee': Offset(cx + (80 * sideMult), cy + 80),
+          'rAnkle': Offset(cx - (90 * sideMult), cy + 140),
+          'lAnkle': Offset(cx + (130 * sideMult), cy + 140),
+        };
+        break;
 
-      final points = [head, neck, leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist, leftHip, rightHip, supportKnee, supportAnkle, activeKnee, activeAnkle];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 25.0, paint);
-    } else if (asanaName == 'El Guerrero' || asanaName == 'El Guerrero II') {
-      final head = Offset(cx - (20 * directionMultiplier), cy - 110);
-      final neck = Offset(cx - (20 * directionMultiplier), cy - 70);
-      final leftShoulder = Offset(cx - (60 * directionMultiplier), cy - 60);
-      final rightShoulder = Offset(cx + (20 * directionMultiplier), cy - 60);
-      final leftElbow = Offset(cx - (110 * directionMultiplier), cy - 60);
-      final leftWrist = Offset(cx - (150 * directionMultiplier), cy - 60);
-      final rightElbow = Offset(cx + (70 * directionMultiplier), cy - 60);
-      final rightWrist = Offset(cx + (110 * directionMultiplier), cy - 60);
-      final spineLow = Offset(cx - (10 * directionMultiplier), cy + 30);
-      final leftHip = Offset(cx - (40 * directionMultiplier), cy + 40);
-      final rightHip = Offset(cx + (20 * directionMultiplier), cy + 40);
-      final frontKnee = Offset(cx - (90 * directionMultiplier), cy + 80);
-      final frontAnkle = Offset(cx - (90 * directionMultiplier), cy + 150);
-      final backKnee = Offset(cx + (60 * directionMultiplier), cy + 100);
-      final backAnkle = Offset(cx + (100 * directionMultiplier), cy + 150);
+      case 'Guerrero Humilde':
+        points = {
+          'head': Offset(cx - (100 * sideMult), cy + 70),
+          'neck': Offset(cx - (70 * sideMult), cy + 30),
+          'rShoulder': Offset(cx - (60 * sideMult), cy + 10),
+          'lShoulder': Offset(cx - (60 * sideMult), cy + 10),
+          'rElbow': Offset(cx - (10 * sideMult), cy - 40),
+          'lElbow': Offset(cx - (10 * sideMult), cy - 40),
+          'rWrist': Offset(cx + (30 * sideMult), cy - 80),
+          'lWrist': Offset(cx + (30 * sideMult), cy - 80),
+          'rHip': Offset(cx, cy + 10),
+          'lHip': Offset(cx, cy + 10),
+          'rKnee': Offset(cx - (80 * sideMult), cy + 80),
+          'lKnee': Offset(cx + (70 * sideMult), cy + 70),
+          'rAnkle': Offset(cx - (80 * sideMult), cy + 150),
+          'lAnkle': Offset(cx + (120 * sideMult), cy + 140),
+        };
+        break;
 
-      canvas.drawLine(leftShoulder, rightShoulder, paint);
-      canvas.drawLine(neck, spineLow, paint);
-      canvas.drawLine(leftHip, rightHip, paint);
-      canvas.drawLine(leftShoulder, leftElbow, paint);
-      canvas.drawLine(leftElbow, leftWrist, paint);
-      canvas.drawLine(rightShoulder, rightElbow, paint);
-      canvas.drawLine(rightElbow, rightWrist, paint);
-      canvas.drawLine(leftHip, frontKnee, paint);
-      canvas.drawLine(frontKnee, frontAnkle, paint);
-      canvas.drawLine(rightHip, backKnee, paint);
-      canvas.drawLine(backKnee, backAnkle, paint);
+      case 'La Plancha':
+        points = {
+          'head': Offset(cx - (160 * sideMult), cy - 60),
+          'neck': Offset(cx - (130 * sideMult), cy - 40),
+          'rShoulder': Offset(cx - (110 * sideMult), cy - 30),
+          'lShoulder': Offset(cx - (110 * sideMult), cy - 30),
+          'rElbow': Offset(cx - (110 * sideMult), cy + 30),
+          'lElbow': Offset(cx - (110 * sideMult), cy + 30),
+          'rWrist': Offset(cx - (110 * sideMult), cy + 80),
+          'lWrist': Offset(cx - (110 * sideMult), cy + 80),
+          'rHip': Offset(cx, cy - 10),
+          'lHip': Offset(cx, cy - 10),
+          'rKnee': Offset(cx + (80 * sideMult), cy + 20),
+          'lKnee': Offset(cx + (80 * sideMult), cy + 20),
+          'rAnkle': Offset(cx + (160 * sideMult), cy + 50),
+          'lAnkle': Offset(cx + (160 * sideMult), cy + 50),
+        };
+        break;
 
-      final points = [head, neck, leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist, leftHip, rightHip, frontKnee, frontAnkle, backKnee, backAnkle];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 24.0, paint);
-    } else if (asanaName == 'La Plancha') {
-      final head = Offset(cx - (120 * directionMultiplier), cy + 10);
-      final neck = Offset(cx - (90 * directionMultiplier), cy + 20);
-      final leftShoulder = Offset(cx - (70 * directionMultiplier), cy + 30);
-      final leftHip = Offset(cx, cy + 45);
-      final leftKnee = Offset(cx + (60 * directionMultiplier), cy + 55);
-      final leftAnkle = Offset(cx + (120 * directionMultiplier), cy + 65);
-      final leftElbow = Offset(cx - (70 * directionMultiplier), cy + 80);
-      final leftWrist = Offset(cx - (70 * directionMultiplier), cy + 120);
+      case 'El Triángulo':
+        points = {
+          'head': Offset(cx - (70 * sideMult), cy - 110),
+          'neck': Offset(cx - (50 * sideMult), cy - 80),
+          'rShoulder': Offset(cx - (50 * sideMult), cy - 70),
+          'lShoulder': Offset(cx - (30 * sideMult), cy - 70),
+          'rElbow': Offset(cx - (50 * sideMult), cy - 130),
+          'lElbow': Offset(cx - (30 * sideMult), cy - 10),
+          'rWrist': Offset(cx - (50 * sideMult), cy - 180),
+          'lWrist': Offset(cx - (30 * sideMult), cy + 50),
+          'rHip': Offset(cx, cy + 10),
+          'lHip': Offset(cx + 30, cy + 10),
+          'rKnee': Offset(cx - (40 * sideMult), cy + 90),
+          'lKnee': Offset(cx + (70 * sideMult), cy + 90),
+          'rAnkle': Offset(cx - (70 * sideMult), cy + 160),
+          'lAnkle': Offset(cx + (110 * sideMult), cy + 160),
+        };
+        break;
 
-      canvas.drawLine(neck, leftHip, paint);
-      canvas.drawLine(leftHip, leftKnee, paint);
-      canvas.drawLine(leftKnee, leftAnkle, paint);
-      canvas.drawLine(leftShoulder, leftElbow, paint);
-      canvas.drawLine(leftElbow, leftWrist, paint);
+      case 'La Cobra':
+        points = {
+          'head': Offset(cx - (120 * sideMult), cy - 120),
+          'neck': Offset(cx - (90 * sideMult), cy - 80),
+          'rShoulder': Offset(cx - (70 * sideMult), cy - 60),
+          'lShoulder': Offset(cx - (70 * sideMult), cy - 60),
+          'rElbow': Offset(cx - (60 * sideMult), cy + 10),
+          'lElbow': Offset(cx - (60 * sideMult), cy + 10),
+          'rWrist': Offset(cx - (80 * sideMult), cy + 60),
+          'lWrist': Offset(cx - (80 * sideMult), cy + 60),
+          'rHip': Offset(cx + (20 * sideMult), cy + 50),
+          'lHip': Offset(cx + (20 * sideMult), cy + 50),
+          'rKnee': Offset(cx + (100 * sideMult), cy + 60),
+          'lKnee': Offset(cx + (100 * sideMult), cy + 60),
+          'rAnkle': Offset(cx + (170 * sideMult), cy + 60),
+          'lAnkle': Offset(cx + (170 * sideMult), cy + 60),
+        };
+        break;
 
-      final points = [head, neck, leftShoulder, leftHip, leftKnee, leftAnkle, leftElbow, leftWrist];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else if (asanaName == 'El Triángulo') {
-      final head = Offset(cx - (60 * directionMultiplier), cy - 20);
-      final shoulder = Offset(cx - (40 * directionMultiplier), cy);
-      final hip = Offset(cx, cy + 30);
-      final ankleFront = Offset(cx - (50 * directionMultiplier), cy + 150);
-      final ankleBack = Offset(cx + (50 * directionMultiplier), cy + 150);
-      final armDown = Offset(cx - (50 * directionMultiplier), cy + 120);
-      final armUp = Offset(cx - (20 * directionMultiplier), cy - 100);
+      case 'La Silla':
+        points = {
+          'head': Offset(cx + (60 * sideMult), cy - 180),
+          'neck': Offset(cx + (40 * sideMult), cy - 140),
+          'rShoulder': Offset(cx + 20, cy - 120),
+          'lShoulder': Offset(cx + 20, cy - 120),
+          'rElbow': Offset(cx + (60 * sideMult), cy - 170),
+          'lElbow': Offset(cx + (60 * sideMult), cy - 170),
+          'rWrist': Offset(cx + (90 * sideMult), cy - 220),
+          'lWrist': Offset(cx + (90 * sideMult), cy - 220),
+          'rHip': Offset(cx - (50 * sideMult), cy - 10),
+          'lHip': Offset(cx - (50 * sideMult), cy - 10),
+          'rKnee': Offset(cx + (20 * sideMult), cy + 60),
+          'lKnee': Offset(cx + (20 * sideMult), cy + 60),
+          'rAnkle': Offset(cx - (30 * sideMult), cy + 140),
+          'lAnkle': Offset(cx - (30 * sideMult), cy + 140),
+        };
+        break;
 
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(hip, ankleFront, paint);
-      canvas.drawLine(hip, ankleBack, paint);
-      canvas.drawLine(shoulder, armDown, paint);
-      canvas.drawLine(shoulder, armUp, paint);
+      case 'Perro Boca Abajo':
+        points = {
+          'head': Offset(cx - (60 * sideMult), cy + 30),
+          'neck': Offset(cx - (40 * sideMult), cy + 10),
+          'rShoulder': Offset(cx - (30 * sideMult), cy - 10),
+          'lShoulder': Offset(cx - (30 * sideMult), cy - 10),
+          'rElbow': Offset(cx - (70 * sideMult), cy + 40),
+          'lElbow': Offset(cx - (70 * sideMult), cy + 40),
+          'rWrist': Offset(cx - (110 * sideMult), cy + 90),
+          'lWrist': Offset(cx - (110 * sideMult), cy + 90),
+          'rHip': Offset(cx, cy - 110),
+          'lHip': Offset(cx, cy - 110),
+          'rKnee': Offset(cx + (60 * sideMult), cy - 10),
+          'lKnee': Offset(cx + (60 * sideMult), cy - 10),
+          'rAnkle': Offset(cx + (110 * sideMult), cy + 90),
+          'lAnkle': Offset(cx + (110 * sideMult), cy + 90),
+        };
+        break;
 
-      final points = [head, shoulder, hip, ankleFront, ankleBack, armDown, armUp];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else if (asanaName == 'La Cobra') {
-      final head = Offset(cx - (80 * directionMultiplier), cy - 60);
-      final shoulder = Offset(cx - (50 * directionMultiplier), cy - 20);
-      final hip = Offset(cx + 20, cy + 40);
-      final ankle = Offset(cx + (120 * directionMultiplier), cy + 50);
-      final wrist = Offset(cx - (50 * directionMultiplier), cy + 40);
+      case 'El Guerrero I':
+        points = {
+          'head': Offset(cx, cy - 180),
+          'neck': Offset(cx, cy - 140),
+          'rShoulder': Offset(cx - 20, cy - 120),
+          'lShoulder': Offset(cx + 20, cy - 120),
+          'rElbow': Offset(cx - 20, cy - 170),
+          'lElbow': Offset(cx + 20, cy - 170),
+          'rWrist': Offset(cx - 20, cy - 220),
+          'lWrist': Offset(cx + 20, cy - 220),
+          'rHip': Offset(cx - 15, cy - 10),
+          'lHip': Offset(cx + 15, cy - 10),
+          'rKnee': Offset(cx - (70 * sideMult), cy + 60),
+          'lKnee': Offset(cx + (70 * sideMult), cy + 60),
+          'rAnkle': Offset(cx - (70 * sideMult), cy + 130),
+          'lAnkle': Offset(cx + (120 * sideMult), cy + 130),
+        };
+        break;
 
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(hip, ankle, paint);
-      canvas.drawLine(shoulder, wrist, paint);
+      case 'La Media Luna':
+        points = {
+          'head': Offset(cx - (100 * sideMult), cy - 10),
+          'neck': Offset(cx - (70 * sideMult), cy - 10),
+          'rShoulder': Offset(cx - (70 * sideMult), cy - 10),
+          'lShoulder': Offset(cx - (70 * sideMult), cy - 10),
+          'rElbow': Offset(cx - (70 * sideMult), cy - 70),
+          'lElbow': Offset(cx - (70 * sideMult), cy + 40),
+          'rWrist': Offset(cx - (70 * sideMult), cy - 130),
+          'lWrist': Offset(cx - (70 * sideMult), cy + 90),
+          'rHip': Offset(cx + (20 * sideMult), cy - 10),
+          'lHip': Offset(cx + (20 * sideMult), cy - 10),
+          'rKnee': Offset(cx + (20 * sideMult), cy + 70),
+          'lKnee': Offset(cx + (100 * sideMult), cy - 10),
+          'rAnkle': Offset(cx + (20 * sideMult), cy + 150),
+          'lAnkle': Offset(cx + (170 * sideMult), cy - 10),
+        };
+        break;
 
-      final points = [head, shoulder, hip, ankle, wrist];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else if (asanaName == 'La Silla') {
-      final head = Offset(cx, cy - 120);
-      final shoulder = Offset(cx, cy - 80);
-      final hip = Offset(cx - (30 * directionMultiplier), cy + 10);
-      final knee = Offset(cx + (30 * directionMultiplier), cy + 60);
-      final ankle = Offset(cx + (10 * directionMultiplier), cy + 140);
-      final wrist = Offset(cx + (40 * directionMultiplier), cy - 140);
+      case 'El Puente':
+        points = {
+          'head': Offset(cx - (140 * sideMult), cy + 60),
+          'neck': Offset(cx - (110 * sideMult), cy + 50),
+          'rShoulder': Offset(cx - (90 * sideMult), cy + 50),
+          'lShoulder': Offset(cx - (90 * sideMult), cy + 50),
+          'rElbow': Offset(cx - (90 * sideMult), cy + 70),
+          'lElbow': Offset(cx - (90 * sideMult), cy + 70),
+          'rWrist': Offset(cx - (30 * sideMult), cy + 70),
+          'lWrist': Offset(cx - (30 * sideMult), cy + 70),
+          'rHip': Offset(cx, cy - 30),
+          'lHip': Offset(cx, cy - 30),
+          'rKnee': Offset(cx + (90 * sideMult), cy + 10),
+          'lKnee': Offset(cx + (90 * sideMult), cy + 10),
+          'rAnkle': Offset(cx + (90 * sideMult), cy + 80),
+          'lAnkle': Offset(cx + (90 * sideMult), cy + 80),
+        };
+        break;
 
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(hip, knee, paint);
-      canvas.drawLine(knee, ankle, paint);
-      canvas.drawLine(shoulder, wrist, paint);
+      case 'El Guerrero III':
+        points = {
+          'head': Offset(cx - (160 * sideMult), cy - 10),
+          'neck': Offset(cx - (130 * sideMult), cy - 10),
+          'rShoulder': Offset(cx - (110 * sideMult), cy - 10),
+          'lShoulder': Offset(cx - (110 * sideMult), cy - 10),
+          'rElbow': Offset(cx - (150 * sideMult), cy - 10),
+          'lElbow': Offset(cx - (150 * sideMult), cy - 10),
+          'rWrist': Offset(cx - (190 * sideMult), cy - 10),
+          'lWrist': Offset(cx - (190 * sideMult), cy - 10),
+          'rHip': Offset(cx, cy - 10),
+          'lHip': Offset(cx, cy - 10),
+          'rKnee': Offset(cx, cy + 60),
+          'lKnee': Offset(cx + (80 * sideMult), cy - 10),
+          'rAnkle': Offset(cx, cy + 130),
+          'lAnkle': Offset(cx + (160 * sideMult), cy - 10),
+        };
+        break;
 
-      final points = [head, shoulder, hip, knee, ankle, wrist];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else if (asanaName == 'Perro Boca Abajo') {
-      final hip = Offset(cx, cy - 80);
-      final shoulder = Offset(cx - (70 * directionMultiplier), cy + 40);
-      final wrist = Offset(cx - (100 * directionMultiplier), cy + 120);
-      final ankle = Offset(cx + (80 * directionMultiplier), cy + 120);
-      final head = Offset(cx - (80 * directionMultiplier), cy + 60);
+      case 'La Pinza de Pie':
+        points = {
+          'head': Offset(cx - (20 * sideMult), cy + 110),
+          'neck': Offset(cx - (20 * sideMult), cy + 70),
+          'rShoulder': Offset(cx - (20 * sideMult), cy + 40),
+          'lShoulder': Offset(cx - (20 * sideMult), cy + 40),
+          'rElbow': Offset(cx - (20 * sideMult), cy + 90),
+          'lElbow': Offset(cx - (20 * sideMult), cy + 90),
+          'rWrist': Offset(cx - (20 * sideMult), cy + 130),
+          'lWrist': Offset(cx - (20 * sideMult), cy + 130),
+          'rHip': Offset(cx, cy - 40),
+          'lHip': Offset(cx, cy - 40),
+          'rKnee': Offset(cx, cy + 40),
+          'lKnee': Offset(cx, cy + 40),
+          'rAnkle': Offset(cx, cy + 130),
+          'lAnkle': Offset(cx, cy + 130),
+        };
+        break;
 
-      canvas.drawLine(hip, shoulder, paint);
-      canvas.drawLine(shoulder, wrist, paint);
-      canvas.drawLine(hip, ankle, paint);
+      case 'El Camello':
+        points = {
+          'head': Offset(cx - (60 * sideMult), cy - 100),
+          'neck': Offset(cx - (40 * sideMult), cy - 70),
+          'rShoulder': Offset(cx - (30 * sideMult), cy - 50),
+          'lShoulder': Offset(cx - (30 * sideMult), cy - 50),
+          'rElbow': Offset(cx + (10 * sideMult), cy - 20),
+          'lElbow': Offset(cx + (10 * sideMult), cy - 20),
+          'rWrist': Offset(cx + (40 * sideMult), cy + 30),
+          'lWrist': Offset(cx + (40 * sideMult), cy + 30),
+          'rHip': Offset(cx - (10 * sideMult), cy + 10),
+          'lHip': Offset(cx - (10 * sideMult), cy + 10),
+          'rKnee': Offset(cx - (10 * sideMult), cy + 90),
+          'lKnee': Offset(cx - (10 * sideMult), cy + 90),
+          'rAnkle': Offset(cx + (40 * sideMult), cy + 90),
+          'lAnkle': Offset(cx + (40 * sideMult), cy + 90),
+        };
+        break;
 
-      final points = [head, hip, shoulder, wrist, ankle];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 20.0, paint);
-    } else if (asanaName == 'El Guerrero I') {
-      final head = Offset(cx, cy - 130);
-      final shoulder = Offset(cx, cy - 80);
-      final wrist = Offset(cx, cy - 180);
-      final hip = Offset(cx, cy + 20);
-      final kneeFront = Offset(cx - (50 * directionMultiplier), cy + 70);
-      final ankleFront = Offset(cx - (50 * directionMultiplier), cy + 140);
-      final ankleBack = Offset(cx + (70 * directionMultiplier), cy + 140);
+      case 'Señor de los Peces':
+        points = {
+          'head': Offset(cx, cy - 100),
+          'neck': Offset(cx, cy - 60),
+          'rShoulder': Offset(cx - 30, cy - 40),
+          'lShoulder': Offset(cx + 30, cy - 40),
+          'rElbow': Offset(cx - 50, cy + 10),
+          'lElbow': Offset(cx + 10, cy),
+          'rWrist': Offset(cx - 20, cy + 60),
+          'lWrist': Offset(cx + 20, cy + 50),
+          'rHip': Offset(cx - 20, cy + 50),
+          'lHip': Offset(cx + 20, cy + 50),
+          'rKnee': Offset(cx - (60 * sideMult), cy + 30),
+          'lKnee': Offset(cx + (40 * sideMult), cy + 80),
+          'rAnkle': Offset(cx + (20 * sideMult), cy + 80),
+          'lAnkle': Offset(cx - (40 * sideMult), cy + 80),
+        };
+        break;
 
-      canvas.drawLine(shoulder, wrist, paint);
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(hip, kneeFront, paint);
-      canvas.drawLine(kneeFront, ankleFront, paint);
-      canvas.drawLine(hip, ankleBack, paint);
+      case 'La Paloma':
+        points = {
+          'head': Offset(cx - (60 * sideMult), cy - 60),
+          'neck': Offset(cx - (40 * sideMult), cy - 20),
+          'rShoulder': Offset(cx - (30 * sideMult), cy),
+          'lShoulder': Offset(cx - (30 * sideMult), cy),
+          'rElbow': Offset(cx - (30 * sideMult), cy + 40),
+          'lElbow': Offset(cx - (30 * sideMult), cy + 40),
+          'rWrist': Offset(cx - (30 * sideMult), cy + 70),
+          'lWrist': Offset(cx - (30 * sideMult), cy + 70),
+          'rHip': Offset(cx, cy + 40),
+          'lHip': Offset(cx, cy + 40),
+          'rKnee': Offset(cx - (60 * sideMult), cy + 60),
+          'lKnee': Offset(cx + (80 * sideMult), cy + 50),
+          'rAnkle': Offset(cx, cy + 70),
+          'lAnkle': Offset(cx + (150 * sideMult), cy + 50),
+        };
+        break;
 
-      final points = [head, shoulder, wrist, hip, kneeFront, ankleFront, ankleBack];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else if (asanaName == 'La Media Luna') {
-      final hip = Offset(cx, cy);
-      final shoulder = Offset(cx - (50 * directionMultiplier), cy);
-      final wristDown = Offset(cx - (50 * directionMultiplier), cy + 90);
-      final wristUp = Offset(cx - (50 * directionMultiplier), cy - 90);
-      final ankleStanding = Offset(cx, cy + 120);
-      final ankleFloating = Offset(cx + (90 * directionMultiplier), cy);
-      final head = Offset(cx - (80 * directionMultiplier), cy);
+      case 'La Mariposa':
+        points = {
+          'head': Offset(cx, cy - 100),
+          'neck': Offset(cx, cy - 60),
+          'rShoulder': Offset(cx - 30, cy - 40),
+          'lShoulder': Offset(cx + 30, cy - 40),
+          'rElbow': Offset(cx - 40, cy + 10),
+          'lElbow': Offset(cx + 40, cy + 10),
+          'rWrist': Offset(cx - 10, cy + 60),
+          'lWrist': Offset(cx + 10, cy + 60),
+          'rHip': Offset(cx - 20, cy + 40),
+          'lHip': Offset(cx + 20, cy + 40),
+          'rKnee': Offset(cx - 80, cy + 60),
+          'lKnee': Offset(cx + 80, cy + 60),
+          'rAnkle': Offset(cx, cy + 70),
+          'lAnkle': Offset(cx, cy + 70),
+        };
+        break;
 
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(shoulder, wristDown, paint);
-      canvas.drawLine(shoulder, wristUp, paint);
-      canvas.drawLine(hip, ankleStanding, paint);
-      canvas.drawLine(hip, ankleFloating, paint);
+      case 'El Barco':
+        points = {
+          'head': Offset(cx - (80 * sideMult), cy - 80),
+          'neck': Offset(cx - (60 * sideMult), cy - 50),
+          'rShoulder': Offset(cx - (50 * sideMult), cy - 30),
+          'lShoulder': Offset(cx - (50 * sideMult), cy - 30),
+          'rElbow': Offset(cx - (10 * sideMult), cy - 10),
+          'lElbow': Offset(cx - (10 * sideMult), cy - 10),
+          'rWrist': Offset(cx + (30 * sideMult), cy + 10),
+          'lWrist': Offset(cx + (30 * sideMult), cy + 10),
+          'rHip': Offset(cx - (20 * sideMult), cy + 50),
+          'lHip': Offset(cx - (20 * sideMult), cy + 50),
+          'rKnee': Offset(cx + (40 * sideMult), cy - 10),
+          'lKnee': Offset(cx + (40 * sideMult), cy - 10),
+          'rAnkle': Offset(cx + (100 * sideMult), cy - 70),
+          'lAnkle': Offset(cx + (100 * sideMult), cy - 70),
+        };
+        break;
 
-      final points = [head, shoulder, hip, wristDown, wristUp, ankleStanding, ankleFloating];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 20.0, paint);
-    } else if (asanaName == 'El Puente') {
-      final head = Offset(cx - (100 * directionMultiplier), cy + 60);
-      final shoulder = Offset(cx - (70 * directionMultiplier), cy + 60);
-      final hip = Offset(cx, cy - 10);
-      final knee = Offset(cx + (60 * directionMultiplier), cy + 20);
-      final ankle = Offset(cx + (60 * directionMultiplier), cy + 80);
-
-      canvas.drawLine(shoulder, hip, paint);
-      canvas.drawLine(hip, knee, paint);
-      canvas.drawLine(knee, ankle, paint);
-
-      final points = [head, shoulder, hip, knee, ankle];
-      for (var point in points) {
-        canvas.drawCircle(point, 7.0, joinPaint);
-      }
-      canvas.drawCircle(head, 22.0, paint);
-    } else {
-      final head = Offset(cx, cy - 120);
-      final neck = Offset(cx, cy - 80);
-      final spineLow = Offset(cx, cy + 40);
-      canvas.drawLine(neck, spineLow, paint);
-      canvas.drawCircle(head, 22.0, paint);
+      default:
+        points = {
+          'head': Offset(cx, cy - 160),
+          'neck': Offset(cx, cy - 120),
+          'rShoulder': Offset(cx - 30, cy - 110),
+          'lShoulder': Offset(cx + 30, cy - 110),
+          'rElbow': Offset(cx - 35, cy - 50),
+          'lElbow': Offset(cx + 35, cy - 50),
+          'rWrist': Offset(cx - 40, cy + 10),
+          'lWrist': Offset(cx + 40, cy + 10),
+          'rHip': Offset(cx - 20, cy + 10),
+          'lHip': Offset(cx + 20, cy + 10),
+          'rKnee': Offset(cx - 20, cy + 90),
+          'lKnee': Offset(cx + 20, cy + 90),
+          'rAnkle': Offset(cx - 20, cy + 170),
+          'lAnkle': Offset(cx + 20, cy + 170),
+        };
+        break;
     }
+
+    void drawLine(String p1, String p2) {
+      if (points.containsKey(p1) && points.containsKey(p2)) {
+        canvas.drawLine(points[p1]!, points[p2]!, paint);
+      }
+    }
+
+    drawLine('head', 'neck');
+    drawLine('neck', 'rShoulder');
+    drawLine('neck', 'lShoulder');
+    drawLine('rShoulder', 'rElbow');
+    drawLine('rElbow', 'rWrist');
+    drawLine('lShoulder', 'lElbow');
+    drawLine('lElbow', 'lWrist');
+    drawLine('rShoulder', 'rHip');
+    drawLine('lShoulder', 'lHip');
+    drawLine('rHip', 'lHip');
+    drawLine('rHip', 'rKnee');
+    drawLine('rKnee', 'rAnkle');
+    drawLine('lHip', 'lKnee');
+    drawLine('lKnee', 'lAnkle');
+
+    points.forEach((key, point) {
+      canvas.drawCircle(point, key == 'head' ? 14 : 6, jointPaint);
+    });
   }
 
   @override
